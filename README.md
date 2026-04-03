@@ -40,7 +40,17 @@ pip install -r requirements.txt
 3. 准备微信数据库
 
    - **Windows**：运行技能时会尝试自动提取微信密钥并解密数据库
-   - **macOS**：需要使用第三方工具（如 wechat-decrypt）提取并解密微信数据库，然后将 `decrypted` 目录复制到项目根目录
+   - **macOS**：技能会自动完成以下步骤：
+     1. **检查微信版本**：确保微信版本为 4.x
+     2. **退出微信**：执行 `killall WeChat`
+     3. **Ad-hoc 签名**：执行 `sudo codesign --force --deep --sign - /Applications/WeChat.app`（需要输入密码）
+     4. **重新打开微信**：重新启动并登录微信
+     5. **安装 wechat-decrypt 工具**：自动克隆并安装 `https://github.com/ylytdeng/wechat-decrypt` 工具
+     6. **提取密钥**：执行 `cd ~/.qclaw/workspace/wechat-decrypt && sudo ./find_all_keys_macos`
+     7. **查找数据库**：自动查找微信数据目录，支持新旧路径
+     8. **解密数据库**：自动运行 wechat-decrypt 工具解密数据库
+
+   **注意**：如果自动流程失败，你可以手动执行上述步骤，然后将解密后的 `decrypted` 目录复制到项目根目录
 
 ### OpenClaw 自主安装
 
