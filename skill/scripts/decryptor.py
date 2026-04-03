@@ -240,22 +240,66 @@ class WeChatDecryptor:
         try:
             import subprocess
             import os
+            import sys
             
             # 检查是否已安装
             if os.path.exists("wechat-decrypt"):
                 return True, "wechat-decrypt 工具已存在"
             
-            # 克隆仓库
-            print("正在安装 wechat-decrypt 工具...")
-            subprocess.run(["git", "clone", "https://github.com/ylytdeng/wechat-decrypt.git"], check=True)
+            # 尝试在用户目录下创建
+            user_home = os.path.expanduser("~")
+            install_dir = os.path.join(user_home, ".qclaw", "workspace")
+            os.makedirs(install_dir, exist_ok=True)
             
-            # 安装依赖
-            print("正在安装依赖...")
-            subprocess.run(["pip", "install", "-r", "wechat-decrypt/requirements.txt"], check=True)
+            # 切换到安装目录
+            original_dir = os.getcwd()
+            os.chdir(install_dir)
             
-            return True, "wechat-decrypt 工具安装成功"
+            try:
+                # 克隆仓库
+                print("正在安装 wechat-decrypt 工具...")
+                result = subprocess.run(
+                    ["git", "clone", "https://github.com/ylytdeng/wechat-decrypt.git"],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode != 0:
+                    return False, f"克隆 wechat-decrypt 仓库失败: {result.stderr}"
+                
+                # 安装依赖
+                print("正在安装依赖...")
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "-r", "wechat-decrypt/requirements.txt"],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode != 0:
+                    return False, f"安装依赖失败: {result.stderr}"
+                
+                return True, "wechat-decrypt 工具安装成功"
+            finally:
+                # 切换回原目录
+                os.chdir(original_dir)
         except Exception as e:
             return False, f"安装 wechat-decrypt 工具失败: {str(e)}"
+    
+    def _get_wechat_decrypt_path(self):
+        """获取 wechat-decrypt 工具的路径"""
+        import os
+        
+        # 检查当前目录
+        if os.path.exists("wechat-decrypt"):
+            return os.path.abspath("wechat-decrypt")
+        
+        # 检查用户目录
+        user_home = os.path.expanduser("~")
+        install_dir = os.path.join(user_home, ".qclaw", "workspace", "wechat-decrypt")
+        if os.path.exists(install_dir):
+            return install_dir
+        
+        return None
     
     def _find_macos_db_storage(self):
         """查找 macOS 微信 db_storage 目录"""
@@ -292,14 +336,31 @@ class WeChatDecryptor:
         try:
             import subprocess
             import os
+            import sys
+            
+            # 获取 wechat-decrypt 工具路径
+            decrypt_path = self._get_wechat_decrypt_path()
+            if not decrypt_path:
+                # 尝试安装
+                success, message = self._auto_install_wechat_decrypt()
+                if not success:
+                    return False, message
+                decrypt_path = self._get_wechat_decrypt_path()
+                if not decrypt_path:
+                    return False, "无法找到 wechat-decrypt 工具"
             
             # 确保输出目录存在
             os.makedirs(output_dir, exist_ok=True)
             
+            # 构建命令
+            main_py = os.path.join(decrypt_path, "main.py")
+            if not os.path.exists(main_py):
+                return False, f"找不到 main.py 文件: {main_py}"
+            
             # 运行解密命令
             print(f"正在解密微信数据库，路径: {db_dir}")
             result = subprocess.run(
-                ["python", "wechat-decrypt/main.py", "decrypt", "--db-dir", db_dir, "--decrypted-dir", output_dir],
+                [sys.executable, main_py, "decrypt", "--db-dir", db_dir, "--decrypted-dir", output_dir],
                 capture_output=True,
                 text=True
             )
@@ -307,7 +368,16 @@ class WeChatDecryptor:
             if result.returncode == 0:
                 return True, "解密成功"
             else:
-                return False, f"解密失败: {result.stderr}"
+                # 提取关键错误信息
+                error_msg = result.stderr
+                if "Permission denied" in error_msg:
+                    return False, "权限不足，请以管理员权限运行"
+                elif "找不到微信进程" in error_msg or "WeChat process not found" in error_msg:
+                    return False, "未找到微信进程，请确保微信已登录"
+                elif "密钥提取失败" in error_msg or "key extraction failed" in error_msg:
+                    return False, "密钥提取失败，请确保微信正在运行并已登录"
+                else:
+                    return False, f"解密失败: {error_msg[:200]}..."  # 限制错误信息长度
         except Exception as e:
             return False, f"运行解密工具失败: {str(e)}"
     

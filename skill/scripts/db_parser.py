@@ -22,19 +22,50 @@ class WeChatDBParser:
         if not self.db_dir:
             return False, "数据库目录未设置"
         
-        message_db_path = os.path.join(self.db_dir, "message", "Msg.db")
-        contact_db_path = os.path.join(self.db_dir, "contact", "Contact.db")
+        # 尝试不同的数据库路径结构
+        possible_message_paths = [
+            os.path.join(self.db_dir, "message", "Msg.db"),
+            os.path.join(self.db_dir, "Msg.db"),
+            os.path.join(self.db_dir, "message_*.db")
+        ]
         
-        if not os.path.exists(message_db_path):
-            return False, f"消息数据库不存在: {message_db_path}"
+        possible_contact_paths = [
+            os.path.join(self.db_dir, "contact", "Contact.db"),
+            os.path.join(self.db_dir, "Contact.db")
+        ]
         
-        if not os.path.exists(contact_db_path):
-            return False, f"联系人数据库不存在: {contact_db_path}"
+        # 查找消息数据库
+        message_db_path = None
+        import glob
+        for path_pattern in possible_message_paths:
+            if "*" in path_pattern:
+                # 使用glob匹配
+                matches = glob.glob(path_pattern)
+                if matches:
+                    message_db_path = matches[0]
+                    break
+            else:
+                if os.path.exists(path_pattern):
+                    message_db_path = path_pattern
+                    break
+        
+        if not message_db_path:
+            return False, f"消息数据库不存在，尝试了以下路径: {', '.join(possible_message_paths)}"
+        
+        # 查找联系人数据库
+        contact_db_path = None
+        for path in possible_contact_paths:
+            if os.path.exists(path):
+                contact_db_path = path
+                break
+        
+        if not contact_db_path:
+            return False, f"联系人数据库不存在，尝试了以下路径: {', '.join(possible_contact_paths)}"
         
         try:
             self.message_db = sqlite3.connect(message_db_path)
             self.contact_db = sqlite3.connect(contact_db_path)
-            return True, "数据库连接成功"
+            return True, f"数据库连接成功，消息数据库: {message_db_path}, 联系人数据库: {contact_db_path}"
         except Exception as e:
             return False, f"数据库连接失败: {str(e)}"
     

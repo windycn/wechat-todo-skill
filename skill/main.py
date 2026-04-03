@@ -115,6 +115,7 @@ class WeChatTodoSkill:
                 print("    - 将解密工具生成的 `decrypted` 目录完整复制到当前用户对话路径下")
                 print("    - 确保目录结构为：`{用户对话路径}/decrypted/message_*.db`")
                 print("\n💡 提示：如果电脑端微信缺少数据，请使用微信的手机聊天记录导出功能导出到电脑微信。")
+                print("\n📚 详细故障排除指南：请查阅 skill/troubleshooting.md 文件获取更多解决方案")
                 return False, "未找到微信数据库目录"
         
         # 连接数据库
@@ -146,6 +147,7 @@ class WeChatTodoSkill:
                 print("    - 将解密工具生成的 `decrypted` 目录完整复制到当前用户对话路径下")
                 print("    - 确保目录结构为：`{用户对话路径}/decrypted/message_*.db`")
                 print("\n💡 提示：如果电脑端微信缺少数据，请使用微信的手机聊天记录导出功能导出到电脑微信。")
+                print("\n📚 详细故障排除指南：请查阅 skill/troubleshooting.md 文件获取更多解决方案")
         
         return success, message
     
@@ -154,11 +156,44 @@ class WeChatTodoSkill:
         if not db_dir or not os.path.exists(db_dir):
             return False
         
-        # 检查是否包含必要的数据库文件
-        message_db = os.path.join(db_dir, "message", "Msg.db")
-        contact_db = os.path.join(db_dir, "contact", "Contact.db")
+        # 尝试不同的数据库路径结构
+        possible_message_paths = [
+            os.path.join(db_dir, "message", "Msg.db"),
+            os.path.join(db_dir, "Msg.db"),
+            os.path.join(db_dir, "message_*.db")
+        ]
         
-        return os.path.exists(message_db) and os.path.exists(contact_db)
+        possible_contact_paths = [
+            os.path.join(db_dir, "contact", "Contact.db"),
+            os.path.join(db_dir, "Contact.db")
+        ]
+        
+        # 查找消息数据库
+        import glob
+        message_found = False
+        for path_pattern in possible_message_paths:
+            if "*" in path_pattern:
+                # 使用glob匹配
+                matches = glob.glob(path_pattern)
+                if matches:
+                    message_found = True
+                    break
+            else:
+                if os.path.exists(path_pattern):
+                    message_found = True
+                    break
+        
+        if not message_found:
+            return False
+        
+        # 查找联系人数据库
+        contact_found = False
+        for path in possible_contact_paths:
+            if os.path.exists(path):
+                contact_found = True
+                break
+        
+        return contact_found
     
     def _find_db_dir(self):
         """自动查找数据库目录"""
