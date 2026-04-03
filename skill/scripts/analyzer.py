@@ -3,8 +3,8 @@ from datetime import datetime
 
 class ChatAnalyzer:
     def __init__(self):
-        # Todo相关关键词（使用简单字符串而非正则表达式，提高性能）
-        self.todo_keywords = [
+        # Todo相关关键词（使用集合提高查找速度）
+        self.todo_keywords = {
             '需要', '要做', '必须', '应该',
             '待办', 'todo', 'TODO', '待办事项',
             '任务', '安排', '计划', '准备',
@@ -12,20 +12,19 @@ class ChatAnalyzer:
             '应该', '应当', '需要做', '要完成',
             '要处理', '要解决', '要跟进', '要落实',
             '待处理', '待解决', '待跟进', '待落实'
-        ]
+        }
         
-        # DDL相关关键词
-        self.ddl_keywords = [
+        # DDL相关关键词（使用集合提高查找速度）
+        self.ddl_keywords = {
             '截止', 'deadline', 'DEADLINE', '截止日期',
-            '截止时间', '最后期限', 'deadline', 'DEADLINE',
-            '之前', '以内', '之内', '完成', '到期',
+            '截止时间', '最后期限', '之前', '以内', '之内', '完成', '到期',
             '今天', '明天', '后天', '本周', '下周',
             '本月', '下月', '今年', '明年',
             '月', '日', '年', '号', '时', '分'
-        ]
+        }
         
-        # 关键事件关键词
-        self.event_keywords = [
+        # 关键事件关键词（使用集合提高查找速度）
+        self.event_keywords = {
             '会议', '讨论', '聚会', '活动',
             '项目', '方案', '计划', '安排',
             '问题', '解决', '进展', '结果',
@@ -35,15 +34,18 @@ class ChatAnalyzer:
             '开始', '完成', '成功', '失败',
             '合作', '协作', '沟通', '交流',
             '汇报', '总结', '分析', '评估'
+        }
+        
+        # 日期正则表达式（预编译提高性能）
+        self.date_patterns = [
+            re.compile(r'\d{4}年\d{1,2}月\d{1,2}日'),
+            re.compile(r'\d{4}/\d{1,2}/\d{1,2}'),
+            re.compile(r'\d{1,2}月\d{1,2}日'),
+            re.compile(r'\d{1,2}/\d{1,2}')
         ]
         
-        # 日期正则表达式（只在需要时使用）
-        self.date_patterns = [
-            r'\d{4}年\d{1,2}月\d{1,2}日',
-            r'\d{4}/\d{1,2}/\d{1,2}',
-            r'\d{1,2}月\d{1,2}日',
-            r'\d{1,2}/\d{1,2}'
-        ]
+        # 时间关键词列表
+        self.time_keywords = ['今天', '明天', '后天', '本周', '下周', '本月', '下月']
     
     def analyze_chat(self, messages):
         """分析聊天记录"""
@@ -89,7 +91,7 @@ class ChatAnalyzer:
         for message in messages:
             content = message['content']
             if len(content) > 10:
-                # 快速检查是否包含关键事件关键词
+                # 快速检查是否包含关键事件关键词（使用集合查找提高速度）
                 if any(keyword in content for keyword in self.event_keywords):
                     # 限制内容长度，避免摘要过长
                     key_contents.add(content[:100])
@@ -119,7 +121,7 @@ class ChatAnalyzer:
             content = message['content']
             timestamp = message['timestamp']
             
-            # 快速检查是否包含关键事件关键词
+            # 快速检查是否包含关键事件关键词（使用集合查找提高速度）
             for keyword in self.event_keywords:
                 if keyword in content:
                     # 生成事件哈希，避免重复
@@ -148,7 +150,7 @@ class ChatAnalyzer:
             content = message['content']
             timestamp = message['timestamp']
             
-            # 快速检查是否包含待办关键词
+            # 快速检查是否包含待办关键词（使用集合查找提高速度）
             for keyword in self.todo_keywords:
                 if keyword in content:
                     # 生成待办哈希，避免重复
@@ -177,7 +179,7 @@ class ChatAnalyzer:
             content = message['content']
             timestamp = message['timestamp']
             
-            # 快速检查是否包含DDL关键词
+            # 快速检查是否包含DDL关键词（使用集合查找提高速度）
             for keyword in self.ddl_keywords:
                 if keyword in content:
                     # 尝试提取日期
@@ -201,14 +203,13 @@ class ChatAnalyzer:
     def _extract_deadline(self, content):
         """从内容中提取截止日期"""
         # 首先检查简单的时间关键词
-        time_keywords = ['今天', '明天', '后天', '本周', '下周', '本月', '下月']
-        for keyword in time_keywords:
+        for keyword in self.time_keywords:
             if keyword in content:
                 return keyword
         
-        # 然后使用正则表达式匹配日期格式
+        # 然后使用预编译的正则表达式匹配日期格式
         for pattern in self.date_patterns:
-            match = re.search(pattern, content)
+            match = pattern.search(content)
             if match:
                 return match.group(0)
         

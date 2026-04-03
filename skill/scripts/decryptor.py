@@ -136,6 +136,11 @@ class WeChatDecryptor:
             return False, "当前不是macOS平台"
         
         try:
+            # 检查微信版本
+            version_check = self._check_wechat_version()
+            if not version_check['success']:
+                return False, version_check['message']
+            
             # 尝试自动安装和使用 wechat-decrypt 工具
             success, message = self._auto_install_wechat_decrypt()
             if not success:
@@ -146,6 +151,11 @@ class WeChatDecryptor:
             if not db_dir:
                 return False, "未找到微信 db_storage 目录，请手动提供路径"
             
+            # 检查是否需要 Ad-hoc 签名
+            sign_check = self._check_wechat_signature()
+            if not sign_check['success']:
+                return False, sign_check['message']
+            
             # 使用 wechat-decrypt 工具解密
             success, message = self._run_wechat_decrypt(db_dir, output_dir)
             if success:
@@ -154,6 +164,76 @@ class WeChatDecryptor:
                 return False, message
         except Exception as e:
             return False, f"解密过程发生错误: {str(e)}"
+    
+    def _check_wechat_version(self):
+        """检查微信版本"""
+        try:
+            import os
+            import subprocess
+            
+            # 检查微信是否安装
+            wechat_app = "/Applications/WeChat.app"
+            if not os.path.exists(wechat_app):
+                return {
+                    'success': False,
+                    'message': "未找到微信应用，请先安装微信"
+                }
+            
+            # 尝试获取微信版本
+            result = subprocess.run(
+                ["defaults", "read", wechat_app + "/Contents/Info.plist", "CFBundleShortVersionString"],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"检测到微信版本: {version}")
+                
+                # 检查是否为 4.x 版本
+                major_version = int(version.split('.')[0])
+                if major_version < 4:
+                    return {
+                        'success': False,
+                        'message': f"微信版本 {version} 过低，需要 4.x 版本以上才能使用此功能"
+                    }
+            
+            return {'success': True, 'message': "微信版本检查通过"}
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f"检查微信版本时发生错误: {str(e)}"
+            }
+    
+    def _check_wechat_signature(self):
+        """检查微信签名状态"""
+        try:
+            import subprocess
+            
+            # 检查微信签名状态
+            result = subprocess.run(
+                ["codesign", "-dv", "/Applications/WeChat.app"],
+                capture_output=True,
+                text=True
+            )
+            
+            # 检查输出中是否包含 ad-hoc 签名
+            if "Signature=adhoc" in result.stdout:
+                return {'success': True, 'message': "微信已使用 ad-hoc 签名"}
+            else:
+                return {
+                    'success': False,
+                    'message': "微信需要 ad-hoc 签名才能解密数据库，请执行以下操作：\n" +
+                              "# 1. 退出微信\nkillall WeChat\n" +
+                              "# 2. Ad-hoc 签名（需要输入密码）\nsudo codesign --force --deep --sign - /Applications/WeChat.app\n" +
+                              "# 3. 重新打开微信并登录\n" +
+                              "# 4. 提取密钥\ncd ~/.qclaw/workspace/wechat-decrypt && sudo ./find_all_keys_macos"
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f"检查微信签名状态时发生错误: {str(e)}"
+            }
     
     def _auto_install_wechat_decrypt(self):
         """自动安装 wechat-decrypt 工具"""
@@ -183,8 +263,10 @@ class WeChatDecryptor:
             import os
             import glob
             
-            # 新路径：/Users/用户名/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/*/db_storage
+            # 自动获取当前用户的主目录
             home_dir = os.path.expanduser("~")
+            
+            # 新路径：/Users/用户名/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/*/db_storage
             search_path = os.path.join(home_dir, "Library", "Containers", "com.tencent.xinWeChat", "Data", "Documents", "xwechat_files")
             
             if os.path.exists(search_path):
