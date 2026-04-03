@@ -44,7 +44,7 @@ pip install -r requirements.txt
 
 ### OpenClaw 自主安装
 
-#### 方法一：自然语言对话安装
+#### 方法一：本地会话安装
 
 你可以通过自然语言对话让 OpenClaw 自主安装此技能：
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
    - 例如：`请分析项目组的今日聊天记录`
    - 或：`帮我提取昨天的待办事项`
 
-#### 方法二：命令安装
+#### 方法二：在线命令安装
 
 1. 在 OpenClaw 中，使用命令 `@install skill https://github.com/windycn/wechat-todo-skill`
 
@@ -68,7 +68,7 @@ pip install -r requirements.txt
    - 例如：`@wechat-todo analyze "项目组" today`
    - 或：`@wechat-todo help` 获取帮助信息
 
-#### 方法三：本地安装
+#### 方法三：本地手动安装
 
 如果你已经下载或克隆了项目到本地，可以通过以下步骤安装到 OpenClaw：
 
@@ -218,5 +218,3 @@ JSON结果:
 ## 许可证
 
 MIT License
-# wechat-todo-skill
-# wechat-todo-skill
