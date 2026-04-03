@@ -23,6 +23,14 @@ class WeChatTodoSkill:
     
     def run(self):
         """运行主流程"""
+        # 首次使用提醒
+        print("📋 首次使用提醒：")
+        print("- 系统将自动配置环境、安装依赖包")
+        print("- 可能需要下载 wechat-decrypt 工具")
+        print("- 解密数据库可能需要一些时间，请耐心等待")
+        print("- 如果运行失败，OpenClaw 会自动尝试解决问题")
+        print()
+        
         # 解析命令行参数
         args = self._parse_args()
         
@@ -30,6 +38,8 @@ class WeChatTodoSkill:
         success, message = self._connect_db(args.db_dir)
         if not success:
             print(f"❌ {message}")
+            print("💡 提示：如果自动解密失败，你可以手动提供 db_storage 目录路径")
+            print("   例如：python skill/main.py --db-dir \"/path/to/db_storage\" --session \"会话名称\"")
             return
         
         try:
