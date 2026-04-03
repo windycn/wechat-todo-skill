@@ -118,9 +118,10 @@
 - 系统路径变更
 
 **解决方案**：
-- 手动指定微信数据目录：`python skill/main.py --db-dir "/path/to/db_storage"`
+- **Windows**：手动指定微信数据目录，微信 4.x 版本路径通常为：`C:\Users\用户名\AppData\Roaming\Tencent\xwechat\radium\users\*\`
+- **macOS**：手动指定微信数据目录，路径通常为：`~/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/*/db_storage`
 - 检查微信设置中的文件管理路径
-- 尝试使用 Finder 搜索 db_storage 文件夹
+- 尝试使用文件管理器搜索数据目录
 
 ## 高级故障排除
 

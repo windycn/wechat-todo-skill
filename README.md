@@ -39,7 +39,13 @@ pip install -r requirements.txt
 
 3. 准备微信数据库
 
-   - **Windows**：运行技能时会尝试自动提取微信密钥并解密数据库
+   - **Windows**：技能会自动完成以下步骤：
+     1. **检查微信版本**：确保微信版本为 4.x
+     2. **检查管理员权限**：确保以管理员权限运行
+     3. **安装 wechat-decrypt 工具**：自动克隆并安装 `https://github.com/ylytdeng/wechat-decrypt` 工具
+     4. **查找数据库**：自动查找微信数据目录，支持新旧路径（新路径：`C:\Users\用户名\AppData\Roaming\Tencent\xwechat\radium\users\*\`）
+     5. **解密数据库**：自动运行 wechat-decrypt 工具解密数据库
+
    - **macOS**：技能会自动完成以下步骤：
      1. **检查微信版本**：确保微信版本为 4.x
      2. **退出微信**：执行 `killall WeChat`
